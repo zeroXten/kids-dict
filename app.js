@@ -304,18 +304,74 @@ function renderSearch() {
   $("spelled").setAttribute("aria-label", prefix ? `Spelled so far: ${prefix}` : "");
   $("clearBtn").hidden = !prefix;
 
+  $("results").hidden = !prefix;
+  $("count").textContent = prefix ? `${matches.length} ${matches.length === 1 ? "word" : "words"}` : "";
   if (prefix) {
     setStatus("");
     $("heard").textContent = "";
     $("suggestions").replaceChildren();
-    $("grid").replaceChildren(...matches.map(wordChip));
-    $("grid").classList.toggle("few", matches.length <= 6);
+    renderList(matches);
   } else {
-    $("grid").replaceChildren();
+    $("list").replaceChildren();
+    $("index").replaceChildren();
     if (!$("status").textContent && !listening) showHint();
   }
-  $("stage").scrollTop = 0;
 }
+
+/** Words grouped by their next letter ("ha", "he", "hi"…), with a thumb index to jump between groups. */
+function renderList(matches) {
+  const groups = new Map();
+  for (const w of matches) {
+    const key = w.word.toLowerCase().slice(0, prefix.length + 1).trim();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(w);
+  }
+  const sections = [];
+  const tabs = [];
+  for (const [key, words] of groups) {
+    const head = document.createElement("h3");
+    head.className = "section";
+    head.textContent = key;
+    sections.push(head, ...words.map(wordRow));
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.textContent = key;
+    tab.onclick = () => {
+      $("results").scrollTo({ top: head.offsetTop - $("list").offsetTop, behavior: "smooth" });
+    };
+    tab._section = head;
+    tabs.push(tab);
+  }
+  $("list").replaceChildren(...sections);
+  $("index").replaceChildren(...tabs);
+  $("index").hidden = groups.size < 2;
+  $("results").scrollTop = 0;
+  updateScrollCues();
+}
+
+function wordRow(entry) {
+  const a = document.createElement("a");
+  a.className = "row";
+  a.href = `#/word/${encodeURIComponent(entry.word)}`;
+  const emoji = Object.assign(document.createElement("span"), { className: "row-emoji", textContent: entry.emoji || "" });
+  emoji.setAttribute("aria-hidden", "true");
+  const word = Object.assign(document.createElement("span"), { className: "row-word", textContent: entry.word });
+  a.append(emoji, word);
+  return a;
+}
+
+/** Fade the bottom while there's more to scroll, and light up the index tab for the section in view. */
+function updateScrollCues() {
+  const r = $("results");
+  r.classList.toggle("more", r.scrollHeight - r.scrollTop - r.clientHeight > 4);
+  const top = r.scrollTop + $("list").offsetTop + 8;
+  let currentTab = null;
+  for (const tab of $("index").children) if (tab._section.offsetTop <= top) currentTab = tab;
+  currentTab ??= $("index").firstElementChild;
+  for (const tab of $("index").children) tab.classList.toggle("current", tab === currentTab);
+}
+$("results").addEventListener("scroll", updateScrollCues, { passive: true });
+window.addEventListener("resize", () => { if (view === "home" && prefix) updateScrollCues(); });
 
 function showHint() {
   const arrow = Object.assign(document.createElement("span"), { className: "hint-arrow", textContent: "👇" });

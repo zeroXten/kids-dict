@@ -26,10 +26,15 @@
       <!-- Search: letters typed so far and the matching words -->
       <section id="home" class="view search-view">
         <div id="spelled" class="spelled" aria-live="polite"></div>
+        <p id="count" class="count"></p>
         <p id="status" class="status" aria-live="polite"></p>
         <p id="heard" class="heard" aria-live="polite"></p>
         <div id="suggestions" class="grid"></div>
-        <div id="grid" class="grid"></div>
+        <!-- Like a dictionary: a thumb index (ha, he, hi…) beside the list of words -->
+        <div id="results" class="results" hidden>
+          <nav id="index" class="index" aria-label="Jump to"></nav>
+          <div id="list" class="list"></div>
+        </div>
       </section>
 
       <!-- Word card: picture, meaning, and the word to copy on the keyboard -->
