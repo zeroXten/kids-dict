@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Word Finder</title>
+  <meta name="description" content="A talking picture dictionary for children.">
+  <meta name="theme-color" content="#ff8a3d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Word Finder">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <a href="#/" id="homeBtn" class="home-btn" aria-label="Back to start" hidden>🏠</a>
+    <h1><a href="#/">Word Finder</a></h1>
+  </header>
+
+  <main>
+    <!-- Search / start screen -->
+    <section id="home" class="view">
+      <button id="micBtn" class="mic" type="button" aria-label="Tap and say a word">
+        <span class="mic-icon" aria-hidden="true">🎤</span>
+      </button>
+      <p id="prompt" class="prompt">Tap and say a word</p>
+      <p id="heard" class="heard" aria-live="polite"></p>
+      <div id="suggestions" class="suggestions" aria-live="polite"></div>
+
+      <form id="typeForm" class="type-form" autocomplete="off">
+        <input id="typeInput" type="search" inputmode="text" autocapitalize="none"
+               autocorrect="off" spellcheck="false" placeholder="or type a word" aria-label="Type a word">
+        <button type="submit">Find</button>
+      </form>
+
+      <h2 class="browse-title">Or pick a letter</h2>
+      <nav id="alphabet" class="alphabet" aria-label="Letters"></nav>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <!-- Word card -->
+    <section id="card" class="view" hidden>
+      <figure class="pic">
+        <img id="cardImg" alt="" hidden>
+        <span id="cardEmoji" class="emoji" aria-hidden="true"></span>
+        <figcaption id="credit" class="credit"></figcaption>
+      </figure>
+
+      <div id="spelling" class="spelling" aria-label=""></div>
+      <p id="typeTag" class="type-tag"></p>
+
+      <div class="actions">
+        <button id="sayBtn" type="button" class="act say"><span aria-hidden="true">🔊</span> Say it</button>
+        <button id="spellBtn" type="button" class="act spell"><span aria-hidden="true">🔤</span> Spell it</button>
+        <button id="meanBtn" type="button" class="act mean"><span aria-hidden="true">📖</span> What it means</button>
+      </div>
+
+      <div class="meaning">
+        <p id="definition" class="definition"></p>
+        <p id="example" class="example"></p>
+      </div>
+
+      <a href="#/" class="again"><span aria-hidden="true">🎤</span> Find another word</a>
+    </section>
+
+    <section id="credits" class="view credits-view" hidden>
+      <h2>Picture credits</h2>
+      <p>Pictures come from <a href="https://openverse.org" rel="noopener">Openverse</a> under Creative Commons or public-domain licences. Where there is no picture, the app shows an emoji.</p>
+      <ul id="creditList"></ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <a href="#/credits">Picture credits</a>
+  </footer>
+
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
