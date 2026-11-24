@@ -194,21 +194,170 @@ async function sequence(button, steps) {
   return run === speechRun;
 }
 
+// ---------------------------------------------------------------- views and state
+
+let view = "home"; // "home" (searching), "card" (a word), or a grown-up page
+let prefix = ""; // letters typed so far while searching
+let current = null; // the word being shown
+let practicePos = 0; // how many letters of the current word have been typed
+let celebrateTimer = null;
+
+function setStatus(content) {
+  const el = $("status");
+  if (typeof content === "string") el.textContent = content;
+  else el.replaceChildren(...content);
+}
+
+function wordChip(entry) {
+  const a = document.createElement("a");
+  a.className = "chip";
+  a.href = `#/word/${encodeURIComponent(entry.word)}`;
+  const emoji = document.createElement("span");
+  emoji.setAttribute("aria-hidden", "true");
+  emoji.textContent = entry.emoji || "";
+  a.append(emoji, entry.word);
+  return a;
+}
+
+// ---------------------------------------------------------------- keyboard
+
+const ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+
+function buildKeyboard() {
+  const kb = $("keyboard");
+  ROWS.forEach((row, r) => {
+    const div = document.createElement("div");
+    div.className = "kb-row";
+    for (const ch of row) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "key";
+      b.textContent = ch;
+      b.dataset.ch = ch;
+      b.setAttribute("aria-label", ch);
+      b.onclick = () => pressLetter(ch);
+      div.append(b);
+    }
+    if (r === 2) {
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "key back";
+      back.textContent = "⌫";
+      back.setAttribute("aria-label", "Rub out");
+      back.onclick = pressBack;
+      div.append(back);
+    }
+    kb.append(div);
+  });
+}
+
+const keys = () => document.querySelectorAll("#keyboard .key[data-ch]");
+
+function pressLetter(ch) {
+  if (view === "home") searchLetter(ch);
+  else if (view === "card") practiceLetter(ch);
+}
+
+function pressBack() {
+  if (view === "home") {
+    prefix = prefix.slice(0, -1);
+    renderSearch();
+  } else if (view === "card" && practicePos > 0) {
+    practicePos--;
+    renderPractice();
+  }
+}
+
+// A real keyboard works too (tablet cases, computers).
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /SELECT|INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (/^[a-z]$/.test(k)) {
+    const btn = document.querySelector(`#keyboard .key[data-ch="${k}"]`);
+    if (btn && !btn.disabled) pressLetter(k);
+    e.preventDefault();
+  } else if (e.key === "Backspace") {
+    pressBack();
+    e.preventDefault();
+  }
+});
+
+// ---------------------------------------------------------------- search
+
+function searchLetter(ch) {
+  prefix += ch;
+  stopSpeaking();
+  speak(LETTER_NAMES[ch]);
+  renderSearch();
+}
+
+function renderSearch() {
+  const matches = prefix ? WORDS.filter((w) => w.word.toLowerCase().startsWith(prefix)) : WORDS;
+  // Only letters that can come next stay pressable, so a child can't spell a dead end.
+  const next = new Set(matches.map((w) => w.word[prefix.length]?.toLowerCase()));
+  for (const k of keys()) {
+    k.disabled = !next.has(k.dataset.ch);
+    k.classList.remove("hint", "nope");
+  }
+
+  $("spelled").replaceChildren(...[...prefix].map((ch) => Object.assign(document.createElement("span"), { textContent: ch })));
+  $("spelled").setAttribute("aria-label", prefix ? `Spelled so far: ${prefix}` : "");
+  $("clearBtn").hidden = !prefix;
+
+  if (prefix) {
+    setStatus("");
+    $("heard").textContent = "";
+    $("suggestions").replaceChildren();
+    $("grid").replaceChildren(...matches.map(wordChip));
+    $("grid").classList.toggle("few", matches.length <= 6);
+  } else {
+    $("grid").replaceChildren();
+    if (!$("status").textContent && !listening) showHint();
+  }
+  $("stage").scrollTop = 0;
+}
+
+function showHint() {
+  const arrow = Object.assign(document.createElement("span"), { className: "hint-arrow", textContent: "👇" });
+  setStatus([
+    Recognition ? "Type a word on the keys, or tap 🎤 and say it" : "Type a word on the keys",
+    arrow,
+  ]);
+}
+
+$("clearBtn").onclick = () => {
+  prefix = "";
+  setStatus("");
+  renderSearch();
+};
+
 // ---------------------------------------------------------------- speech in
 
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recogniser = null;
 let listening = false;
 
-function setPrompt(text) { $("prompt").textContent = text; }
+function setListening(on) {
+  listening = on;
+  $("micBtn").classList.toggle("listening", on);
+  $("micLabel").textContent = on ? "Listening…" : "Say a word";
+}
 
 function startListening() {
+  if (view !== "home") {
+    // Switch to the search screen straight away (not via hashchange), so the
+    // microphone starts within the tap that asked for it.
+    history.pushState(null, "", "#/");
+    route();
+  }
   if (!Recognition) {
-    setPrompt("Talking isn't available here. Spell it with the letters below.");
+    setStatus("Talking isn't available on this device. Type the word on the keys instead.");
     return;
   }
   if (listening) { recogniser.stop(); return; }
   stopSpeaking();
+  prefix = "";
+  renderSearch();
 
   recogniser = new Recognition();
   recogniser.lang = "en-GB";
@@ -219,11 +368,10 @@ function startListening() {
   let finalAlternatives = null;
 
   recogniser.onstart = () => {
-    listening = true;
-    $("micBtn").classList.add("listening");
-    setPrompt("I'm listening…");
+    setListening(true);
+    setStatus("I'm listening… say a word!");
     $("heard").textContent = "";
-    $("suggestions").innerHTML = "";
+    $("suggestions").replaceChildren();
   };
   recogniser.onresult = (e) => {
     const result = e.results[e.results.length - 1];
@@ -232,108 +380,42 @@ function startListening() {
   };
   recogniser.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      setPrompt("Ask a grown-up to let me use the microphone.");
+      setStatus("Ask a grown-up to let me use the microphone.");
     } else if (e.error === "no-speech") {
-      setPrompt("I didn't hear anything. Tap and try again!");
+      setStatus("I didn't hear anything. Tap 🎤 and try again!");
     } else if (e.error === "network") {
-      setPrompt("I need the internet to listen. Spell it with the letters below.");
+      setStatus("I need the internet to listen. Type the word on the keys instead.");
     }
   };
   recogniser.onend = () => {
-    listening = false;
-    $("micBtn").classList.remove("listening");
-    if (finalAlternatives) handleSearch(finalAlternatives, true);
-    else if ($("prompt").textContent === "I'm listening…") setPrompt("Tap and say a word");
+    setListening(false);
+    if (finalAlternatives) handleSpoken(finalAlternatives);
+    else if ($("status").textContent.startsWith("I'm listening")) { setStatus(""); renderSearch(); }
   };
   recogniser.start();
 }
 
-function handleSearch(phrases, spoken) {
+function handleSpoken(phrases) {
   const { entry, suggestions, heard } = findWord(phrases);
   if (entry) {
     location.hash = `#/word/${encodeURIComponent(entry.word)}`;
     return;
   }
-  const box = $("suggestions");
-  box.innerHTML = "";
-  setPrompt("Tap and say a word");
-  const msg = document.createElement("p");
   if (suggestions.length) {
-    msg.textContent = `I don't know "${heard}" yet. Did you mean…`;
-    box.append(msg, ...suggestions.map(wordChip));
-    if (spoken) speak(`I don't know that word yet. Did you mean ${suggestions.map((s) => s.word).join(", or ")}?`);
+    setStatus(`I don't know "${heard}" yet. Did you mean…`);
+    $("suggestions").replaceChildren(...suggestions.map(wordChip));
+    speak(`I don't know that word yet. Did you mean ${suggestions.map((s) => s.word).join(", or ")}?`);
   } else {
-    msg.textContent = heard ? `I don't know "${heard}" yet. Try another word!` : "Try another word!";
-    box.append(msg);
-    if (spoken) speak("I don't know that word yet. Try another one!");
+    setStatus(heard ? `I don't know "${heard}" yet. Try another word!` : "Try another word!");
+    speak("I don't know that word yet. Try another one!");
   }
+  $("heard").textContent = "";
 }
 
-// ---------------------------------------------------------------- views
+$("micBtn").onclick = startListening;
+$("micBtn").classList.toggle("unsupported", !Recognition);
 
-function wordChip(entry) {
-  const a = document.createElement("a");
-  a.className = "chip";
-  a.href = `#/word/${encodeURIComponent(entry.word)}`;
-  a.innerHTML = `<span aria-hidden="true"></span>`;
-  a.firstChild.textContent = entry.emoji || "";
-  a.append(entry.word);
-  return a;
-}
-
-// Letters tapped so far: the word list shows only words starting with them.
-let prefix = "";
-
-function renderHome() {
-  const alphabet = $("alphabet");
-  if (!alphabet.childElementCount) {
-    for (const ch of "abcdefghijklmnopqrstuvwxyz") {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = ch;
-      b.dataset.ch = ch;
-      b.setAttribute("aria-label", `letter ${ch}`);
-      b.onclick = () => {
-        prefix += ch;
-        stopSpeaking();
-        speak(LETTER_NAMES[ch]);
-        renderGrid();
-      };
-      alphabet.append(b);
-    }
-  }
-  renderGrid();
-}
-
-function renderGrid() {
-  const matches = WORDS.filter((w) => w.word.toLowerCase().startsWith(prefix));
-  // Only letters that can come next stay tappable, so a child can't spell a dead end.
-  const next = new Set(matches.map((w) => w.word[prefix.length]?.toLowerCase()));
-  for (const b of $("alphabet").children) b.disabled = !next.has(b.dataset.ch);
-
-  $("spelled").hidden = !prefix;
-  $("spelledLetters").replaceChildren(
-    ...[...prefix].map((ch) => Object.assign(document.createElement("span"), { className: "spelled-letter", textContent: ch })),
-  );
-  $("spelledLetters").setAttribute("aria-label", prefix ? `Spelled so far: ${prefix}` : "");
-
-  const list = prefix ? matches : shuffled(WORDS).slice(0, 12);
-  $("grid").replaceChildren(...list.map(wordChip));
-}
-
-$("backBtn").onclick = () => { prefix = prefix.slice(0, -1); renderGrid(); };
-$("resetBtn").onclick = () => { prefix = ""; renderGrid(); };
-
-function shuffled(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-let current = null;
+// ---------------------------------------------------------------- word card
 
 function renderCard(entry) {
   current = entry;
@@ -352,7 +434,7 @@ function renderCard(entry) {
     img.removeAttribute("src");
     $("cardEmoji").textContent = entry.emoji || "📘";
   }
-  $("credit").innerHTML = "";
+  $("credit").replaceChildren();
   if (entry.image && credit) $("credit").append(creditLine(credit));
 
   const spelling = $("spelling");
@@ -361,11 +443,11 @@ function renderCard(entry) {
   spelling.style.setProperty("--n", entry.word.length);
   spelling.replaceChildren(
     ...[...entry.word].map((ch, i) => {
-      // Spaces and hyphens ("ice cream", "grown-up") are shown but not spoken.
+      // Spaces and hyphens ("ice cream", "grown-up") are shown but not typed or spoken.
       if (!LETTER_NAMES[ch.toLowerCase()]) {
         const gap = document.createElement("span");
         gap.className = "letter gap";
-        gap.textContent = ch === " " ? "\u00a0" : ch;
+        gap.textContent = ch === " " ? " " : ch;
         gap.setAttribute("aria-hidden", "true");
         return gap;
       }
@@ -376,22 +458,23 @@ function renderCard(entry) {
       b.dataset.i = i;
       b.setAttribute("aria-label", `letter ${ch}`);
       b.onclick = () => {
-        const spoken = LETTER_NAMES[ch.toLowerCase()];
-        if (!spoken) return;
-        sequence(null, [async () => { highlightLetter(i); await speak(spoken); clearLetterHighlight(); }]);
+        sequence(null, [async () => { highlightLetter(i); await speak(LETTER_NAMES[ch.toLowerCase()]); clearLetterHighlight(); }]);
       };
       return b;
     }),
   );
 
   const [name, kid] = TYPE_LABELS[entry.type] || [entry.type, ""];
-  $("typeTag").innerHTML = "";
   const b = document.createElement("b");
   b.textContent = name;
-  $("typeTag").append(b, kid ? ` · ${kid}` : "");
+  $("typeTag").replaceChildren(b, kid ? ` · ${kid}` : "");
 
   $("definition").textContent = entry.definition;
   $("example").replaceChildren(...highlightWord(entry.example || "", entry));
+
+  practicePos = 0;
+  hideCelebrate();
+  renderPractice();
 }
 
 function creditLine(c) {
@@ -425,6 +508,70 @@ function clearLetterHighlight() {
   $("spelling")?.classList.remove("all-on");
 }
 
+// ---------------------------------------------------------------- practice: copy the word
+
+/** Positions in the current word that are letters to type (skips spaces and hyphens). */
+const letterPositions = () => [...current.word].flatMap((ch, i) => (LETTER_NAMES[ch.toLowerCase()] ? [i] : []));
+
+function renderPractice() {
+  const positions = letterPositions();
+  const tiles = [...$("spelling").querySelectorAll(".letter:not(.gap)")];
+  tiles.forEach((t, n) => {
+    t.classList.toggle("done", n < practicePos);
+    t.classList.toggle("todo", n >= practicePos);
+    t.classList.toggle("next", n === practicePos);
+  });
+  const want = practicePos < positions.length ? current.word[positions[practicePos]].toLowerCase() : null;
+  for (const k of keys()) {
+    k.disabled = false;
+    k.classList.toggle("hint", k.dataset.ch === want);
+    k.classList.remove("nope");
+  }
+  $("practiceNote").hidden = practicePos > 0;
+}
+
+function practiceLetter(ch) {
+  const positions = letterPositions();
+  if (practicePos >= positions.length) return;
+  const i = positions[practicePos];
+  const tile = $("spelling").querySelector(`.letter[data-i="${i}"]`);
+  if (ch === current.word[i].toLowerCase()) {
+    practicePos++;
+    renderPractice();
+    if (practicePos === positions.length) celebrate();
+    else sequence(null, [() => speak(LETTER_NAMES[ch])]);
+  } else {
+    // Not that one: wiggle the letter they're on, and flash the key they pressed.
+    tile.classList.remove("wrong");
+    void tile.offsetWidth; // restart the animation
+    tile.classList.add("wrong");
+    const key = document.querySelector(`#keyboard .key[data-ch="${ch}"]`);
+    key.classList.add("nope");
+    setTimeout(() => key.classList.remove("nope"), 300);
+  }
+}
+
+function celebrate() {
+  const entry = current;
+  $("celebrate").hidden = false;
+  sequence(null, [
+    () => speak(entry.word, { rate: 0.75 }),
+    () => speak("Well done!", { pitch: 1.2 }),
+  ]);
+  clearTimeout(celebrateTimer);
+  celebrateTimer = setTimeout(() => {
+    if (current !== entry) return;
+    hideCelebrate();
+    practicePos = 0; // ready to have another go
+    renderPractice();
+  }, 2600);
+}
+
+function hideCelebrate() {
+  clearTimeout(celebrateTimer);
+  $("celebrate").hidden = true;
+}
+
 // ---------------------------------------------------------------- card actions
 
 function sayWord() {
@@ -432,9 +579,8 @@ function sayWord() {
 }
 
 function spellWord() {
-  const letters = [...current.word];
   const steps = [];
-  letters.forEach((ch, i) => {
+  [...current.word].forEach((ch, i) => {
     const spoken = LETTER_NAMES[ch.toLowerCase()];
     if (!spoken) return;
     steps.push(async () => { highlightLetter(i); await speak(spoken, { rate: 0.8 }); await pause(180); });
@@ -462,7 +608,6 @@ function sayMeaning() {
 $("sayBtn").onclick = sayWord;
 $("spellBtn").onclick = spellWord;
 $("meanBtn").onclick = sayMeaning;
-$("micBtn").onclick = startListening;
 
 // ---------------------------------------------------------------- credits
 
@@ -547,41 +692,46 @@ $("voiceTry").onclick = () => { stopSpeaking(); speak("Hello! This is how I soun
 
 function route() {
   stopSpeaking();
-  if (listening) recogniser.abort();
+  hideCelebrate();
   const hash = decodeURIComponent(location.hash.slice(1));
   const wordMatch = hash.match(/^\/word\/(.+)$/);
   const entry = wordMatch && lookup.get(wordMatch[1].toLowerCase());
-
   const page = ["/credits", "/settings"].includes(hash) ? hash : null;
-  $("home").hidden = !!entry || !!page;
-  $("card").hidden = !entry;
+  if (listening && (entry || page)) recogniser.abort();
+
+  view = entry ? "card" : page || "home";
+  $("home").hidden = view !== "home";
+  $("card").hidden = view !== "card";
   $("credits").hidden = page !== "/credits";
   $("settings").hidden = page !== "/settings";
-  $("homeBtn").hidden = !entry && !page;
+  $("dock").hidden = !!page;
+  $("backLink").hidden = !page;
+  $("settingsLink").hidden = !!page;
+  $("newBtn").hidden = view !== "card";
+  $("clearBtn").hidden = true;
+  $("stage").scrollTop = 0;
 
   if (entry) {
-    prefix = ""; // next time the start screen opens, spelling starts fresh
+    prefix = ""; // the next search starts fresh
     renderCard(entry);
-    window.scrollTo(0, 0);
-    // Say the word as the card opens: speech synthesis is allowed here because the
-    // child has just tapped or spoken, and some browsers quietly skip it otherwise.
-    setTimeout(() => { if (current === entry) sayWord(); }, 250);
+    // Say the word as the card opens: the child has just tapped or spoken, so
+    // browsers allow speech here.
+    setTimeout(() => { if (current === entry && view === "card") sayWord(); }, 250);
   } else if (page === "/credits") {
     renderCredits();
   } else if (page === "/settings") {
     renderSettings();
   } else {
     document.title = "Word Finder";
-    setPrompt(Recognition ? "Tap and say a word" : "Spell your word with the letters");
-    $("micBtn").classList.toggle("unsupported", !Recognition);
-    $("heard").textContent = "";
-    $("suggestions").innerHTML = "";
-    renderHome();
+    if (!listening) { setStatus(""); $("heard").textContent = ""; }
+    $("suggestions").replaceChildren();
+    renderSearch();
   }
 }
 
 window.addEventListener("hashchange", route);
 
+buildKeyboard();
 await loadData();
 route();
 

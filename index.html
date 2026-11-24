@@ -15,84 +15,86 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
-    <a href="#/" id="homeBtn" class="home-btn" aria-label="Back to start" hidden>🏠</a>
-    <h1><a href="#/">Word Finder</a></h1>
-  </header>
+  <div class="app">
+    <header class="top">
+      <a href="#/" id="backLink" class="icon-btn" aria-label="Back" hidden>←</a>
+      <h1>Word Finder</h1>
+      <a href="#/settings" id="settingsLink" class="icon-btn" aria-label="Settings for grown-ups">⚙️</a>
+    </header>
 
-  <main>
-    <!-- Search / start screen -->
-    <section id="home" class="view">
-      <button id="micBtn" class="mic" type="button" aria-label="Tap and say a word">
-        <span class="mic-icon" aria-hidden="true">🎤</span>
-      </button>
-      <p id="prompt" class="prompt">Tap and say a word</p>
-      <p id="heard" class="heard" aria-live="polite"></p>
-      <div id="suggestions" class="suggestions" aria-live="polite"></div>
+    <main id="stage">
+      <!-- Search: letters typed so far and the matching words -->
+      <section id="home" class="view search-view">
+        <div id="spelled" class="spelled" aria-live="polite"></div>
+        <p id="status" class="status" aria-live="polite"></p>
+        <p id="heard" class="heard" aria-live="polite"></p>
+        <div id="suggestions" class="grid"></div>
+        <div id="grid" class="grid"></div>
+      </section>
 
+      <!-- Word card: picture, meaning, and the word to copy on the keyboard -->
+      <section id="card" class="view card-view" hidden>
+        <div class="card-top">
+          <figure class="pic">
+            <img id="cardImg" alt="" hidden>
+            <span id="cardEmoji" class="emoji" aria-hidden="true"></span>
+            <figcaption id="credit" class="credit"></figcaption>
+          </figure>
+          <div class="meaning">
+            <p id="typeTag" class="type-tag"></p>
+            <p id="definition" class="definition"></p>
+            <p id="example" class="example"></p>
+          </div>
+        </div>
 
-      <h2 class="browse-title">Or spell it</h2>
-      <div id="spelled" class="spelled" hidden>
-        <div id="spelledLetters" class="spelled-letters" aria-live="polite"></div>
-        <button id="backBtn" type="button" class="spelled-btn" aria-label="Take away the last letter">⌫</button>
-        <button id="resetBtn" type="button" class="spelled-btn" aria-label="Start again">✕</button>
+        <div id="spelling" class="spelling" aria-label=""></div>
+        <p id="practiceNote" class="practice-note">Can you type it? 👇</p>
+
+        <div class="actions">
+          <button id="sayBtn" type="button" class="act say"><span aria-hidden="true">🔊</span> Say it</button>
+          <button id="spellBtn" type="button" class="act spell"><span aria-hidden="true">🔤</span> Spell it</button>
+          <button id="meanBtn" type="button" class="act mean"><span aria-hidden="true">📖</span> Meaning</button>
+        </div>
+
+        <div id="celebrate" class="celebrate" hidden aria-live="polite"><span>🎉</span>Well done!</div>
+      </section>
+
+      <section id="credits" class="view page-view" hidden>
+        <h2>Picture credits</h2>
+        <p>Pictures come from <a href="https://openverse.org" rel="noopener">Openverse</a> under Creative Commons or public-domain licences. Where there is no picture, the app shows an emoji.</p>
+        <ul id="creditList"></ul>
+      </section>
+
+      <section id="settings" class="view page-view" hidden>
+        <h2>Settings for grown-ups</h2>
+        <h3>Install the app</h3>
+        <button id="installBtn" type="button" class="install-btn" hidden>📲 Install Word Finder</button>
+        <p id="installNote" class="note"></p>
+
+        <h3>Voice</h3>
+        <label for="voiceSelect" class="visually-hidden">Voice</label>
+        <div class="voice-row">
+          <select id="voiceSelect"></select>
+          <button id="voiceTry" type="button">▶ Try</button>
+        </div>
+        <p id="voiceNote" class="note"></p>
+        <p class="note">The voices come from this device, so each phone or tablet has its own list. More can usually be added in the device's settings (on iPhone: Settings → Accessibility → Spoken Content → Voices).</p>
+
+        <h3>Pictures</h3>
+        <p class="note"><a href="#/credits">Picture credits</a></p>
+      </section>
+    </main>
+
+    <!-- Always at the bottom: tools and the keyboard -->
+    <div id="dock" class="dock">
+      <div class="toolbar">
+        <a href="#/" id="newBtn" class="tool-btn" hidden><span aria-hidden="true">🔍</span> New word</a>
+        <button id="micBtn" type="button" class="tool-btn mic-btn"><span aria-hidden="true">🎤</span> <span id="micLabel">Say a word</span></button>
+        <button id="clearBtn" type="button" class="tool-btn" hidden><span aria-hidden="true">✕</span> Start again</button>
       </div>
-      <nav id="alphabet" class="alphabet" aria-label="Letters"></nav>
-      <div id="grid" class="grid"></div>
-    </section>
-
-    <!-- Word card -->
-    <section id="card" class="view" hidden>
-      <figure class="pic">
-        <img id="cardImg" alt="" hidden>
-        <span id="cardEmoji" class="emoji" aria-hidden="true"></span>
-        <figcaption id="credit" class="credit"></figcaption>
-      </figure>
-
-      <div id="spelling" class="spelling" aria-label=""></div>
-      <p id="typeTag" class="type-tag"></p>
-
-      <div class="actions">
-        <button id="sayBtn" type="button" class="act say"><span aria-hidden="true">🔊</span> Say it</button>
-        <button id="spellBtn" type="button" class="act spell"><span aria-hidden="true">🔤</span> Spell it</button>
-        <button id="meanBtn" type="button" class="act mean"><span aria-hidden="true">📖</span> What it means</button>
-      </div>
-
-      <div class="meaning">
-        <p id="definition" class="definition"></p>
-        <p id="example" class="example"></p>
-      </div>
-
-      <a href="#/" class="again"><span aria-hidden="true">🎤</span> Find another word</a>
-    </section>
-
-    <section id="credits" class="view credits-view" hidden>
-      <h2>Picture credits</h2>
-      <p>Pictures come from <a href="https://openverse.org" rel="noopener">Openverse</a> under Creative Commons or public-domain licences. Where there is no picture, the app shows an emoji.</p>
-      <ul id="creditList"></ul>
-    </section>
-
-    <section id="settings" class="view credits-view" hidden>
-      <h2>Settings for grown-ups</h2>
-      <h3>Install the app</h3>
-      <button id="installBtn" type="button" class="install-btn" hidden>📲 Install Word Finder</button>
-      <p id="installNote" class="note"></p>
-
-      <h3>Voice</h3>
-      <label for="voiceSelect" class="visually-hidden">Voice</label>
-      <div class="voice-row">
-        <select id="voiceSelect"></select>
-        <button id="voiceTry" type="button">▶ Try</button>
-      </div>
-      <p id="voiceNote" class="note"></p>
-      <p class="note">The voices come from this device, so each phone or tablet has its own list. More can usually be added in the device's settings (on iPhone: Settings → Accessibility → Spoken Content → Voices).</p>
-    </section>
-  </main>
-
-  <footer class="foot">
-    <a href="#/credits">Picture credits</a> · <a href="#/settings">Settings</a>
-  </footer>
-
+      <div id="keyboard" class="keyboard" role="group" aria-label="Keyboard"></div>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

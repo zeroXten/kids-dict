@@ -1,15 +1,17 @@
 # Word Finder
 
-A talking picture dictionary for young children. Tap the microphone, say a word
-("frozen"), and the app shows a picture, the spelling in big letters, and buttons to:
+A talking picture dictionary for young children. A big keyboard sits at the bottom of the
+screen. As a child types, the matching words appear above it, and only letters that can come
+next stay pressable (f, r, o, z leaves just "frozen"). Or they tap 🎤 and say the word.
+
+Each word shows a picture, a child-friendly meaning, and the word in big letters, with buttons to:
 
 - **Say it**: hear the word
 - **Spell it**: hear each letter while it lights up, then the whole word (tap any letter to hear just that one)
-- **What it means**: hear a child-friendly definition and an example sentence
+- **Meaning**: hear the definition and an example sentence
 
-Children can also spell a word by tapping letters: each letter narrows the list, and only
-letters that can come next stay tappable (f, r, o, z leaves just "frozen"). Misheard words
-get "Did you mean…?" suggestions.
+On a word's page the keyboard switches to practice: the letters start pale and fill in as the
+child types them, the next key to press glows, and finishing the word gets a "Well done!".
 
 Plain static files with no build step. It installs as a PWA and works offline.
 
