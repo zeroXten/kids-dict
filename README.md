@@ -7,7 +7,8 @@ A talking picture dictionary for young children. Tap the microphone, say a word
 - **Spell it**: hear each letter while it lights up, then the whole word (tap any letter to hear just that one)
 - **What it means**: hear a child-friendly definition and an example sentence
 
-Children can also type a word or browse by first letter. Misheard or misspelled words
+Children can also spell a word by tapping letters: each letter narrows the list, and only
+letters that can come next stay tappable (f, r, o, z leaves just "frozen"). Misheard words
 get "Did you mean…?" suggestions.
 
 Plain static files with no build step. It installs as a PWA and works offline.
@@ -35,7 +36,7 @@ Add an entry to `data/words.json`:
  "forms":["freezing"], "imageQuery":"frozen icicles"}
 ```
 
-- `type`: noun, verb, adjective, adverb, preposition or conjunction (shown with a child-friendly label such as "a doing word")
+- `type`: noun, verb, adjective, adverb, preposition, conjunction, pronoun, determiner, number or interjection (shown with a child-friendly label such as "a doing word")
 - `forms`: other spellings that should find this word, like plurals and past tenses ("teeth" finds "tooth")
 - `emoji`: shown when there's no picture
 - `imageQuery`: search text for the picture, if the word alone would find the wrong thing

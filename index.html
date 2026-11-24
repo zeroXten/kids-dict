@@ -30,13 +30,13 @@
       <p id="heard" class="heard" aria-live="polite"></p>
       <div id="suggestions" class="suggestions" aria-live="polite"></div>
 
-      <form id="typeForm" class="type-form" autocomplete="off">
-        <input id="typeInput" type="search" inputmode="text" autocapitalize="none"
-               autocorrect="off" spellcheck="false" placeholder="or type a word" aria-label="Type a word">
-        <button type="submit">Find</button>
-      </form>
 
-      <h2 class="browse-title">Or pick a letter</h2>
+      <h2 class="browse-title">Or spell it</h2>
+      <div id="spelled" class="spelled" hidden>
+        <div id="spelledLetters" class="spelled-letters" aria-live="polite"></div>
+        <button id="backBtn" type="button" class="spelled-btn" aria-label="Take away the last letter">⌫</button>
+        <button id="resetBtn" type="button" class="spelled-btn" aria-label="Start again">✕</button>
+      </div>
       <nav id="alphabet" class="alphabet" aria-label="Letters"></nav>
       <div id="grid" class="grid"></div>
     </section>
@@ -71,10 +71,21 @@
       <p>Pictures come from <a href="https://openverse.org" rel="noopener">Openverse</a> under Creative Commons or public-domain licences. Where there is no picture, the app shows an emoji.</p>
       <ul id="creditList"></ul>
     </section>
+
+    <section id="settings" class="view credits-view" hidden>
+      <h2>Settings for grown-ups</h2>
+      <label for="voiceSelect"><b>Voice</b></label>
+      <div class="voice-row">
+        <select id="voiceSelect"></select>
+        <button id="voiceTry" type="button">▶ Try</button>
+      </div>
+      <p id="voiceNote" class="note"></p>
+      <p class="note">The voices come from this device, so each phone or tablet has its own list. More can usually be added in the device's settings (on iPhone: Settings → Accessibility → Spoken Content → Voices).</p>
+    </section>
   </main>
 
   <footer class="foot">
-    <a href="#/credits">Picture credits</a>
+    <a href="#/credits">Picture credits</a> · <a href="#/settings">Settings</a>
   </footer>
 
 

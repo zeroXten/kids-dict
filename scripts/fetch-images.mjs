@@ -132,7 +132,7 @@ for (const [i, entry] of targets.entries()) {
     if (!result) {
       console.log(`no result #${pick}, keeping emoji`);
     } else {
-      const saved = await download(result, path.join(ROOT, "images", entry.word));
+      const saved = await download(result, path.join(ROOT, "images", entry.word.toLowerCase().replace(/[^a-z0-9]+/g, "-")));
       const file = path.relative(ROOT, saved);
       if (oldFile && oldFile !== saved && existsSync(oldFile)) await unlink(oldFile);
       entry.image = file;
