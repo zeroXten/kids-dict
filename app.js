@@ -33,18 +33,52 @@ async function loadData() {
     fetch("data/words.json", { cache: "no-cache" }).then((r) => r.json()),
     fetch("data/credits.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
   ]);
-  WORDS = words.sort((a, b) => a.word.localeCompare(b.word));
   CREDITS = credits;
-  for (const entry of WORDS) {
+  const byWord = new Map(words.map((w) => [w.word.toLowerCase(), w]));
+
+  // A word can borrow another word's picture ("quack" uses "duck").
+  for (const w of words) {
+    const from = w.imageFrom && byWord.get(w.imageFrom.toLowerCase());
+    if (from) {
+      w.image = from.image;
+      w.creditKey = from.word;
+      w.emoji ||= from.emoji;
+    }
+  }
+
+  for (const entry of words) {
     // Keys are lower case, so "monday" finds "Monday". Headwords beat other words' forms.
     lookup.set(entry.word.toLowerCase(), entry);
     // Speech recognition writes "grown-up" as "grown up".
     if (entry.word.includes("-")) lookup.set(entry.word.toLowerCase().replace(/-/g, " "), entry);
   }
-  for (const entry of WORDS) {
-    for (const f of entry.forms || []) if (!lookup.has(f.toLowerCase())) lookup.set(f.toLowerCase(), entry);
+
+  // Every other form of a word ("mice", "ran", "quick") is a word to spell in its own
+  // right: it gets its own page, sharing the main word's picture and meaning.
+  const extra = [];
+  for (const base of words) {
+    for (const form of base.forms || []) {
+      const key = form.toLowerCase();
+      if (lookup.has(key)) continue;
+      const entry = {
+        word: form,
+        type: base.type,
+        emoji: base.emoji,
+        image: base.image,
+        creditKey: base.creditKey || base.word,
+        definition: base.definition,
+        example: base.example,
+        forms: [base.word, ...base.forms],
+        base,
+      };
+      lookup.set(key, entry);
+      extra.push(entry);
+    }
   }
+  WORDS = [...words, ...extra].sort((a, b) => a.word.localeCompare(b.word));
 }
+
+const creditFor = (entry) => CREDITS[entry.creditKey || entry.word];
 
 // ---------------------------------------------------------------- matching
 
@@ -354,7 +388,7 @@ function renderList(matches) {
 
 function wordRow(entry) {
   const a = document.createElement("a");
-  a.className = "row";
+  a.className = entry.base ? "row form" : "row";
   a.href = `#/word/${encodeURIComponent(entry.word)}`;
   const emoji = Object.assign(document.createElement("span"), { className: "row-emoji", textContent: entry.emoji || "" });
   emoji.setAttribute("aria-hidden", "true");
@@ -481,7 +515,7 @@ function renderCard(entry) {
   document.title = `${entry.word} – Word Finder`;
 
   const img = $("cardImg");
-  const credit = CREDITS[entry.word];
+  const credit = creditFor(entry);
   if (entry.image) {
     img.src = entry.image;
     img.alt = entry.word;
@@ -529,6 +563,15 @@ function renderCard(entry) {
   $("typeTag").replaceChildren(b, kid ? ` · ${kid}` : "");
 
   $("definition").textContent = entry.definition;
+  // A form of another word links back to it: "mice" → "See also: mouse".
+  $("related").hidden = !entry.base;
+  if (entry.base) {
+    const link = document.createElement("a");
+    link.href = `#/word/${encodeURIComponent(entry.base.word)}`;
+    link.textContent = entry.base.word;
+    const plural = [`${entry.base.word}s`, `${entry.base.word}es`].includes(entry.word.toLowerCase());
+    $("related").replaceChildren(plural ? "More than one " : "See also: ", link);
+  }
   $("example").replaceChildren(...highlightWord(entry.example || "", entry));
 
   practicePos = 0;
@@ -671,7 +714,7 @@ $("meanBtn").onclick = sayMeaning;
 // ---------------------------------------------------------------- credits
 
 function renderCredits() {
-  const items = WORDS.filter((w) => w.image && CREDITS[w.word]).map((w) => {
+  const items = WORDS.filter((w) => !w.base && !w.imageFrom && w.image && CREDITS[w.word]).map((w) => {
     const li = document.createElement("li");
     li.append(`${w.word}: `, creditLine(CREDITS[w.word]));
     return li;

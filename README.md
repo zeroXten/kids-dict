@@ -39,7 +39,9 @@ Add an entry to `data/words.json`:
 ```
 
 - `type`: noun, verb, adjective, adverb, preposition, conjunction, pronoun, determiner, number or interjection (shown with a child-friendly label such as "a doing word")
-- `forms`: other spellings that should find this word, like plurals and past tenses ("teeth" finds "tooth")
+- `forms`: plurals, past tenses and other forms ("mice", "ran"). Each one becomes a word of its own
+  to look up and practise, sharing this word's picture and meaning, with a link back to it
+- `imageFrom`: use another word's picture, e.g. `"imageFrom": "duck"` for "quack"
 - `emoji`: shown when there's no picture
 - `imageQuery`: search text for the picture, if the word alone would find the wrong thing
 - `noImage: true`: never fetch a picture for this word (abstract words, feelings, people)
