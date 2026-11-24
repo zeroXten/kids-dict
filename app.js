@@ -16,14 +16,11 @@ const TYPE_LABELS = {
   interjection: ["exclamation", "a word you say on its own"],
 };
 
-// Speaking letter names on their own is unreliable ("a" is often read as "uh"),
-// so each letter has a spoken form. UK names ("zed", "aitch").
-const LETTER_NAMES = {
-  a: "ay", b: "bee", c: "see", d: "dee", e: "ee", f: "eff", g: "jee", h: "aitch",
-  i: "eye", j: "jay", k: "kay", l: "ell", m: "em", n: "en", o: "oh", p: "pee",
-  q: "cue", r: "ar", s: "ess", t: "tee", u: "you", v: "vee", w: "double you",
-  x: "ex", y: "why", z: "zed",
-};
+// How to say each letter. Voices read a capital letter on its own as its name ("E" is
+// "ee"), except "A", which some read as the word "a" ("uh"), so that one is spelled out.
+// Written-out names like "ee" or "eff" don't work: voices spell them letter by letter.
+const LETTER_NAMES = Object.fromEntries([..."abcdefghijklmnopqrstuvwxyz"].map((c) => [c, c.toUpperCase()]));
+LETTER_NAMES.a = "ay";
 
 let WORDS = [];
 let CREDITS = {};
@@ -174,10 +171,16 @@ function speak(text, { rate = 0.85, pitch = 1.05 } = {}) {
     u.lang = voice ? voice.lang.replace("_", "-") : "en-GB";
     u.rate = rate;
     u.pitch = pitch;
-    u.onend = u.onerror = () => resolve();
+    // Some voices never report that they've finished, which would stall "Spell it"
+    // part-way. Carry on anyway after a generous time for the text's length.
+    const done = () => { clearTimeout(timer); speaking.delete(u); resolve(); };
+    const timer = setTimeout(done, 1500 + text.length * 180 / rate);
+    u.onend = u.onerror = done;
+    speaking.add(u); // Chrome can drop the end event of an utterance nothing refers to
     speechSynthesis.speak(u);
   });
 }
+const speaking = new Set();
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
