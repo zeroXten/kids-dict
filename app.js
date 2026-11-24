@@ -478,6 +478,38 @@ function renderCredits() {
 
 // ---------------------------------------------------------------- settings
 
+// Installing: Chrome, Edge and Android offer a prompt the page can trigger; Safari on
+// iPhone and iPad doesn't, so there we explain the Share menu instead.
+let installEvent = null;
+window.addEventListener("beforeinstallprompt", (e) => { installEvent = e; renderInstall(); });
+window.addEventListener("appinstalled", () => { installEvent = null; renderInstall(); });
+
+function renderInstall() {
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const ua = navigator.userAgent;
+  const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const iosSafari = ios && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+
+  $("installBtn").hidden = installed || !installEvent;
+  $("installNote").textContent = installed
+    ? "✓ Word Finder is installed on this device."
+    : installEvent
+      ? "Puts Word Finder on the home screen, so it opens like an app and works offline."
+      : iosSafari
+        ? "Tap the Share button (the square with an arrow) at the bottom or top of Safari, then Add to Home Screen, then Add."
+        : ios
+          ? "On iPhone and iPad, open this page in Safari, then tap Share → Add to Home Screen."
+          : "Open your browser's menu and choose Install app or Add to Home screen.";
+}
+
+$("installBtn").onclick = async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  renderInstall();
+};
+
 const regionName = (() => {
   try {
     const names = new Intl.DisplayNames(["en-GB"], { type: "region" });
@@ -488,6 +520,7 @@ const regionName = (() => {
 })();
 
 function renderSettings() {
+  renderInstall();
   const select = $("voiceSelect");
   const list = englishVoices().sort(
     (a, b) => (normLang(a.lang) === "en-gb" ? 0 : 1) - (normLang(b.lang) === "en-gb" ? 0 : 1) ||

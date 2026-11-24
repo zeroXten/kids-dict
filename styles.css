@@ -255,6 +255,9 @@ main { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 16px 2
 .voice-row select { flex: 1; min-width: 0; font: inherit; font-size: 1rem; padding: 8px; border-radius: 12px; border: 2px solid #eadfce; background: var(--tile); }
 .voice-row button { border: none; border-radius: 12px; padding: 8px 14px; background: var(--blue); color: white; font-weight: 700; }
 .note { color: var(--muted); font-size: 0.9rem; }
+.credits-view h3 { margin: 18px 0 6px; font-size: 1.1rem; }
+.install-btn { border: none; border-radius: 12px; padding: 10px 16px; background: var(--orange); color: white; font-weight: 700; font-size: 1.05rem; box-shadow: 0 4px 0 var(--orange-dark); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 @media (prefers-reduced-motion: reduce) {
   .mic.listening, .mic.listening::after { animation: none; }
