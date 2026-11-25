@@ -14,6 +14,7 @@ const TYPE_LABELS = {
   determiner: ["determiner", "a word that tells you which or how many"],
   number: ["number", "a counting word"],
   interjection: ["exclamation", "a word you say on its own"],
+  name: ["name", "a person's name"],
 };
 
 // How to say each letter. Voices read a capital letter on its own as its name ("E" is
